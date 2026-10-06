@@ -7,7 +7,7 @@ import type { PokemonRef } from '../services/types';
  * ("zoroark-hisui", "landorus-therian"), no hyphen for plain names ("fluttermane").
  * To use local files later, change these two functions.
  */
-const ARTWORK_DEX: Record<string, number> = { 'zoroark-hisui': 10239, lucario: 448 };
+const ARTWORK_DEX: Record<string, number> = { 'terapagos-stellar': 10277 };
 
 export const spriteSources = {
   icon: (id: string) => `https://play.pokemonshowdown.com/sprites/gen5/${id}.png`,

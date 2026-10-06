@@ -12,7 +12,7 @@ interface Props {
   searching?: boolean;
 }
 
-export function QuickMatch({ teams, selectedTeam, formats, formatId, onSelectTeam, onSelectFormat, onPlay, heroIds = ['zoroark-hisui', 'lucario'], searching }: Props) {
+export function QuickMatch({ teams, selectedTeam, formats, formatId, onSelectTeam, onSelectFormat, onPlay, heroIds = ['terapagos-stellar'], searching }: Props) {
   return (
     <section className="quick" aria-labelledby="quick-title">
       <div>

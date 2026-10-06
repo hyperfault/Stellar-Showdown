@@ -70,8 +70,7 @@ export function LoginScreen({ connected }: { connected: boolean }) {
           )}
         </div>
         <div className="hero-art" aria-hidden="true">
-          <PokemonArtwork id="zoroark-hisui" />
-          <PokemonArtwork id="lucario" />
+          <PokemonArtwork id="terapagos-stellar" />
         </div>
       </section>
     </>
