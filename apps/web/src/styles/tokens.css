@@ -1,0 +1,83 @@
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+
+/* Stellar design tokens: single source for color, type, spacing, radius, shadow, motion.
+   Theme is set by <html data-theme="dark|light"> (see useTheme). Dark is the default. */
+:root {
+  --font-sans: 'Rajdhani', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --r-xs: 2px; --r-sm: 4px; --r-md: 6px; --r-lg: 8px; --r-pill: 999px;
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px; --s-8: 32px;
+
+  --fs-xs: 0.75rem; --fs-sm: 0.8125rem; --fs-md: 1rem; --fs-lg: 1.25rem; --fs-xl: 1.75rem;
+  --fs-display: clamp(1.7rem, 3.4vw, 2.6rem);
+  --fw-medium: 500; --fw-semi: 600; --fw-bold: 700;
+  --track: .06em;
+
+  --t-fast: 120ms; --t-base: 180ms; --t-slow: 320ms;
+  --ease: cubic-bezier(.2, .7, .2, 1);
+  --sidebar-w: 248px;
+  --blur: blur(10px) saturate(1.2);
+}
+
+:root, :root[data-theme='dark'] {
+  color-scheme: dark;
+  --c-bg: #04080f;
+  --c-scrim: linear-gradient(180deg, rgba(3, 8, 16, .55), rgba(3, 8, 16, .35) 40%, rgba(3, 8, 16, .7));
+  --c-sidebar: rgba(6, 13, 23, .8);
+  --c-topbar: rgba(6, 13, 23, .55);
+  --c-panel: rgba(8, 17, 29, .68);
+  --c-surface: rgba(13, 25, 40, .86);
+  --c-surface-hi: rgba(22, 40, 62, .92);
+  --c-line: rgba(110, 195, 255, .22);
+  --c-ink: #eaf5fc;
+  --c-muted: #9db4c6;
+  --c-faint: #6d8499;
+  --c-accent: #35c3ff;
+  --c-accent-hi: #8be6ff;
+  --c-accent-lo: #1788c8;
+  --c-accent-tint: rgba(53, 195, 255, .16);
+  --c-on-accent: #031420;
+  --c-win: #4fe3b0;
+  --c-loss: #ff6b61;
+  --c-online: #3df59a;
+  --c-focus: #8be6ff;
+  --glow: 0 0 0 1px rgba(53, 195, 255, .55), 0 0 18px rgba(53, 195, 255, .35);
+  --shadow-card: 0 2px 0 rgba(0, 0, 0, .35), 0 6px 16px rgba(0, 0, 0, .35);
+  --shadow-raised: 0 2px 0 rgba(0, 0, 0, .4), 0 10px 24px rgba(0, 0, 0, .45);
+  --shadow-menu: 0 16px 40px rgba(0, 0, 0, .6);
+  --shadow-press: inset 0 3px 6px rgba(0, 0, 0, .5);
+  --shadow-cta: 0 0 0 1px rgba(255, 255, 255, .35) inset, 0 0 22px rgba(53, 195, 255, .55), 0 4px 0 #0e5f8c;
+  --art-shadow: drop-shadow(0 0 18px rgba(53, 195, 255, .35)) drop-shadow(0 8px 12px rgba(0, 0, 0, .55));
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --c-bg: #dfe9ef;
+  --c-scrim: linear-gradient(180deg, rgba(235, 244, 250, .72), rgba(235, 244, 250, .5) 40%, rgba(228, 240, 248, .8));
+  --c-sidebar: rgba(244, 249, 252, .82);
+  --c-topbar: rgba(244, 249, 252, .65);
+  --c-panel: rgba(244, 249, 252, .72);
+  --c-surface: rgba(255, 255, 255, .88);
+  --c-surface-hi: rgba(255, 255, 255, .98);
+  --c-line: rgba(30, 110, 160, .28);
+  --c-ink: #11202c;
+  --c-muted: #476072;
+  --c-faint: #7890a1;
+  --c-accent: #1798d6;
+  --c-accent-hi: #4cc2f2;
+  --c-accent-lo: #0f78ad;
+  --c-accent-tint: rgba(23, 152, 214, .14);
+  --c-on-accent: #ffffff;
+  --c-win: #12886f;
+  --c-loss: #c8443b;
+  --c-online: #1fb26a;
+  --c-focus: #0f78ad;
+  --glow: 0 0 0 1px rgba(23, 152, 214, .6), 0 0 14px rgba(23, 152, 214, .3);
+  --shadow-card: 0 2px 0 rgba(20, 60, 90, .12), 0 6px 14px rgba(20, 60, 90, .12);
+  --shadow-raised: 0 2px 0 rgba(20, 60, 90, .16), 0 10px 22px rgba(20, 60, 90, .18);
+  --shadow-menu: 0 14px 36px rgba(20, 60, 90, .28);
+  --shadow-press: inset 0 3px 6px rgba(20, 60, 90, .25);
+  --shadow-cta: 0 0 0 1px rgba(255, 255, 255, .5) inset, 0 0 18px rgba(23, 152, 214, .45), 0 4px 0 #0b5f8a;
+  --art-shadow: drop-shadow(0 8px 12px rgba(20, 60, 90, .35));
+}
