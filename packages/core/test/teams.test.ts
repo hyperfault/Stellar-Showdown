@@ -39,3 +39,57 @@ describe('teams', () => {
     expect(importTeamPaste('not a team at all {{{')).toBeUndefined();
   });
 });
+
+describe('paste export compatibility', () => {
+  const FULL = `Pikachu @ Light Ball
+Ability: Static
+Level: 50
+Shiny: Yes
+Tera Type: Electric
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+IVs: 0 Atk
+- Thunderbolt
+- Hidden Power Ice
+
+Snorlax (M) @ Leftovers
+Ability: Thick Fat
+Careful Nature
+- Rest
+`;
+
+  it('keeps ability, EVs, nature, shiny and gender when exporting', async () => {
+    const { exportTeamPaste } = await import('../src/teams');
+    const out = exportTeamPaste(importTeamPaste(FULL, gen)!, gen);
+    for (const line of ['Ability: Static', 'Level: 50', 'Shiny: Yes', 'Tera Type: Electric', 'EVs: 252 SpA / 4 SpD / 252 Spe', 'Timid Nature', 'IVs: 0 Atk', 'Snorlax (M) @ Leftovers', 'Ability: Thick Fat', 'Careful Nature']) {
+      expect(out).toContain(line);
+    }
+  });
+
+  it('round-trips paste -> sets -> paste -> sets without losing data', async () => {
+    const { exportTeamPaste } = await import('../src/teams');
+    const first = importTeamPaste(FULL, gen)!;
+    const second = importTeamPaste(exportTeamPaste(first, gen), gen)!;
+    expect(second.team).toEqual(first.team);
+  });
+
+  it('exports and imports a single set', async () => {
+    const { exportSetPaste, importSetPaste } = await import('../src/teams');
+    const set = importTeamPaste(FULL, gen)!.team[0]!;
+    const text = exportSetPaste(set, gen);
+    expect(text).toContain('Ability: Static');
+    expect(importSetPaste(text, gen)).toEqual(set);
+    expect(importSetPaste('???', gen)).toBeUndefined();
+  });
+});
+
+describe('export purity', () => {
+  it('does not mutate the sets it exports', async () => {
+    const { exportTeamPaste, exportSetPaste } = await import('../src/teams');
+    const team = importTeamPaste('Garchomp @ Leftovers\nAbility: Rough Skin\n- Earthquake\n', gen)!.team;
+    const before = JSON.stringify(team);
+    exportTeamPaste(team, gen);
+    exportSetPaste(team[0]!, gen);
+    expect(JSON.stringify(team)).toBe(before);
+  });
+});

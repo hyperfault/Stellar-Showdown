@@ -6,6 +6,7 @@ import { fetchGuestAssertion, fetchRegisteredAssertion } from './auth';
 import { ChatRoom, BattleRoom, Room } from './rooms';
 import { gens as defaultGens } from './dex';
 import { packTeam } from './teams';
+import { parseFormatsList, type FormatEntry } from './formats';
 
 export const DEFAULT_SERVER_URL = 'wss://sim3.psim.us/showdown/websocket';
 export const DEFAULT_LOGIN_SERVER_URL = 'https://play.pokemonshowdown.com';
@@ -22,16 +23,6 @@ export interface UserInfo {
   userid: ID;
   named: boolean;
   avatar: string;
-}
-
-export interface FormatEntry {
-  id: ID;
-  name: string;
-  section: string;
-  searchShow: boolean;
-  challengeShow: boolean;
-  /** Random-team formats need no team selection (no /utm). */
-  isRandomFormat: boolean;
 }
 
 export interface SearchState {
@@ -272,7 +263,8 @@ export class PSClient {
         break;
       }
       case 'formats':
-        this.parseFormats(rest());
+        this.formats = parseFormatsList(parts.slice(2));
+        this.events.emit('formats', this.formats);
         break;
       case 'updatesearch': {
         const json = JSON.parse(rest()) as { searching?: string[]; games?: Record<string, string> };
@@ -305,32 +297,6 @@ export class PSClient {
       default:
         break; // queryresponse/tournament/etc. — later milestones
     }
-  }
-
-  private parseFormats(payload: string): void {
-    const entries: FormatEntry[] = [];
-    let section = '';
-    for (const entry of payload.split(';')) {
-      if (!entry) continue;
-      if (entry.startsWith(',')) {
-        section = entry.replace(/,LL$/, '').slice(1);
-        continue;
-      }
-      const comma = entry.indexOf(',');
-      const name = comma === -1 ? entry : entry.slice(0, comma);
-      // TODO: verify flag bitmask semantics against the official client.
-      const flags = comma === -1 ? 0 : parseInt(entry.slice(comma + 1), 16) || 0;
-      entries.push({
-        id: toID(name),
-        name,
-        section,
-        searchShow: (flags & 1) !== 0,
-        challengeShow: (flags & 2) === 0,
-        isRandomFormat: /random/i.test(name),
-      });
-    }
-    this.formats = entries;
-    this.events.emit('formats', entries);
   }
 
   private handleRoomLine(roomid: string, line: string): void {

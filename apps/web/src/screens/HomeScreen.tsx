@@ -1,8 +1,12 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { AppShell, type ScreenId } from '../components/AppShell';
 import { QuickMatch } from '../components/QuickMatch';
 import { FeaturedReplays, LadderCard, RecentBattles, YourTeams } from '../components/Panels';
+import { FormatPicker } from '../formats/FormatPicker';
 import { useHomeData } from '../services/useHomeData';
+import { toUiTeam } from '../services/showdown';
+import { useAppStore } from '../store';
+import { pickTeam, useTeamStore } from '../teams/store';
 import '../styles/app.css';
 
 interface Props {
@@ -23,31 +27,52 @@ interface Props {
 export function HomeScreen({ onPlay, onNavigate, onLogout, onOpenReplay, searching, rooms, topbarExtra, children }: Props) {
   const data = useHomeData();
   const [active, setActive] = useState<ScreenId>('play');
-  // Backend reality: Random Battle is the only fully playable format for now.
-  const [formatId, setFormatId] = useState('gen9randombattle');
+  const [pickerOpen, setPickerOpen] = useState(false);
 
-  // Quick match format follows the selected team unless changed manually.
-  useEffect(() => { if (data.selectedTeam) setFormatId(data.selectedTeam.formatId); }, [data.selectedTeam]);
+  // Format comes from the live server list; teams come from the local team library.
+  const formatId = useAppStore((s) => s.selectedFormatId);
+  const setFormat = useAppStore((s) => s.setSelectedFormat);
+  const serverFormats = useAppStore((s) => s.formats);
+  const entry = serverFormats.find((f) => f.id === formatId);
+  const needsTeam = !!entry?.needsTeam;
+  const teamFormat = entry?.teamFormat ?? formatId;
+  const library = useTeamStore();
+  const allTeams = library.teams.map(toUiTeam);
+  const chosen = pickTeam(library, teamFormat);
+  const compatible = needsTeam ? allTeams.filter((t) => t.formatId === teamFormat) : [];
+  const selectedUi = needsTeam ? compatible.find((t) => t.id === chosen?.id) ?? null : null;
+  const profile = data.profile && { ...data.profile, currentFormat: entry?.name ?? formatId };
+
+  const selectTeam = (id: string) => {
+    const team = library.teams.find((t) => t.id === id);
+    if (!team) return;
+    const target = serverFormats.find((f) => f.id === team.format);
+    if (target) setFormat(target.id); // picking a team switches Quick Match to its format
+    library.select(target?.teamFormat ?? team.format, id);
+  };
 
   const navigate = (id: ScreenId) => { setActive(id); onNavigate?.(id); };
 
   return (
-    <AppShell active={active} onNavigate={navigate} profile={data.profile} onLogout={onLogout} rooms={rooms} topbarExtra={topbarExtra}>
+    <AppShell active={active} onNavigate={navigate} profile={profile} onLogout={onLogout} rooms={rooms} topbarExtra={topbarExtra}>
       <div className="welcome">
         <h1>Welcome back, <em>{data.profile?.username ?? '…'}</em></h1>
         <p>Ready for your next battle?</p>
       </div>
-      <QuickMatch teams={data.teams} selectedTeam={data.selectedTeam} formats={data.formats} formatId={formatId}
-        onSelectTeam={data.selectTeam} onSelectFormat={setFormatId} onPlay={() => onPlay?.(formatId, data.selectedTeam?.id)} searching={searching} />
+      <QuickMatch teams={compatible} selectedTeam={selectedUi} needsTeam={needsTeam}
+        onSelectTeam={selectTeam} onChangeFormat={() => setPickerOpen(true)} onBuildTeam={() => navigate('teams')}
+        onPlay={() => onPlay?.(formatId, chosen?.id)} searching={searching} />
       <div className="grid">
         <RecentBattles battles={data.battles} onOpen={onOpenReplay} />
-        <YourTeams teams={data.teams} selectedId={data.selectedTeam?.id} onSelect={data.selectTeam} />
+        <YourTeams teams={allTeams} selectedId={selectedUi?.id} onSelect={selectTeam} />
         <div className="side">
-          <LadderCard profile={data.profile} />
+          <LadderCard profile={profile} />
           <FeaturedReplays replays={data.replays} onOpen={onOpenReplay} />
         </div>
       </div>
       {children}
+      <FormatPicker open={pickerOpen} onClose={() => setPickerOpen(false)} purpose="play" value={formatId}
+        onSelect={setFormat} onOpenTeams={() => { setPickerOpen(false); navigate('teams'); }} />
     </AppShell>
   );
 }

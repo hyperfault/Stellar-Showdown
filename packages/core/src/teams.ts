@@ -8,17 +8,32 @@ import type { PokemonSet } from '@pkmn/types';
  * Paste import/export stays byte-compatible with the official client.
  */
 
-// @pkmn/data's Generation is structurally compatible with @pkmn/sets' Data
-// interface at runtime (same DataTable shapes for species/moves/etc.), but the
-// nominal types differ, hence the cast.
-const asData = (gen?: Generation): Data | undefined => gen as unknown as Data | undefined;
+// @pkmn/sets wants the dex-shaped `Data` (species/abilities/natures/...). That is
+// `generation.dex`, NOT the Generation object itself: passing the Generation makes
+// `export` silently drop Ability / EVs / Nature / Shiny / Gender lines.
+const dexOf = (gen?: Generation): Data | undefined => gen?.dex as unknown as Data | undefined;
 
 export function importTeamPaste(text: string, genFor?: Generation): Team | undefined {
-  return Teams.importTeam(text, asData(genFor));
+  return Teams.importTeam(text, dexOf(genFor));
 }
 
-export function exportTeamPaste(team: Team, genFor?: Generation): string {
-  return team.export(asData(genFor));
+// @pkmn/sets fills defaults into the sets it is given while exporting; work on copies so callers' state is never mutated.
+const copy = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
+
+export function exportTeamPaste(team: Team | ReadonlyArray<Partial<PokemonSet>>, genFor?: Generation): string {
+  const sets = team instanceof Team ? team.team : (team as PokemonSet[]);
+  return new Team(copy(sets as PokemonSet[])).export(dexOf(genFor));
+}
+
+/** A single set as Showdown paste text. */
+export function exportSetPaste(set: Partial<PokemonSet>, genFor?: Generation): string {
+  return Sets.exportSet(copy(set) as PokemonSet, dexOf(genFor));
+}
+
+/** Parse one set from paste text; undefined if it isn't a recognizable set. */
+export function importSetPaste(text: string, genFor?: Generation): PokemonSet | undefined {
+  const set = Sets.importSet(text.trim(), dexOf(genFor)) as PokemonSet | undefined;
+  return set && set.species ? set : undefined;
 }
 
 /** Packed format for `/utm` before /challenge or /search. */

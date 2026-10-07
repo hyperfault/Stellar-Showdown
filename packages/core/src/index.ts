@@ -3,6 +3,7 @@ export * from './connection';
 export * from './auth';
 export * from './dex';
 export * from './teams';
+export * from './formats';
 export * from './rooms';
 export * from './choices';
 export * from './request';

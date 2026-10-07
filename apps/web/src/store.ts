@@ -15,9 +15,18 @@ interface AppState {
   tick: number;
   view: View;
   toast: string | null;
+  /** Format chosen in the format picker (Quick Match). Persisted. */
+  selectedFormatId: string;
+  setSelectedFormat: (id: string) => void;
   setView: (view: View) => void;
   dismissToast: () => void;
 }
+
+const FORMAT_KEY = 'stellar.format.v1';
+const DEFAULT_FORMAT = 'gen9randombattle';
+const loadFormat = (): string => {
+  try { return localStorage.getItem(FORMAT_KEY) || DEFAULT_FORMAT; } catch { return DEFAULT_FORMAT; }
+};
 
 export const useAppStore = create<AppState>()((set) => ({
   connected: false,
@@ -28,12 +37,17 @@ export const useAppStore = create<AppState>()((set) => ({
   tick: 0,
   view: { kind: 'screen', screen: 'play' },
   toast: null,
+  selectedFormatId: loadFormat(),
+  setSelectedFormat: (id) => {
+    try { localStorage.setItem(FORMAT_KEY, id); } catch { /* storage unavailable */ }
+    set({ selectedFormatId: id });
+  },
   setView: (view) => set({ view }),
   dismissToast: () => set({ toast: null }),
 }));
 
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
-function showToast(message: string): void {
+export function showToast(message: string): void {
   useAppStore.setState({ toast: message });
   if (toastTimer) clearTimeout(toastTimer);
   toastTimer = setTimeout(() => useAppStore.setState({ toast: null }), 6000);

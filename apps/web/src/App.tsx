@@ -1,9 +1,12 @@
 import { useEffect, type ReactNode } from 'react';
 import { BattleRoom, ChatRoom } from '@stellar/core';
 import { client } from './client';
-import { useAppStore } from './store';
+import { showToast, useAppStore } from './store';
 import { ServiceProvider } from './services/context';
-import { createShowdownService, toPlayerProfile } from './services/showdown';
+import { RANDOM_BATTLE_ID, createShowdownService, toPlayerProfile } from './services/showdown';
+import { formatSupport } from './formats/support';
+import { pickTeam, useTeamStore } from './teams/store';
+import { loadValidation } from './teams/validate';
 import { AppShell, type ScreenId } from './components/AppShell';
 import { RoomNav } from './components/RoomNav';
 import { ChallengeDock } from './components/ChallengeDock';
@@ -11,6 +14,7 @@ import { SearchPill } from './components/SearchPill';
 import { HomeScreen } from './screens/HomeScreen';
 import { LoginScreen } from './screens/LoginScreen';
 import { PlaceholderScreen } from './screens/PlaceholderScreen';
+import TeamsScreen from './screens/TeamsScreen';
 import BattleScreen from './screens/BattleScreen';
 import ChatScreen from './screens/ChatScreen';
 
@@ -34,9 +38,28 @@ export default function App() {
   const navigate = (screen: ScreenId) => setView({ kind: 'screen', screen });
   const openRoom = (roomid: string) => setView({ kind: 'room', roomid });
 
-  const onPlay = (formatId: string) => {
-    if (searching) client.cancelSearch();
-    else client.searchBattles(formatId); // Random Battle: no team upload needed
+  const onPlay = async (formatId: string) => {
+    if (searching) { client.cancelSearch(); return; }
+    const entry = client.formats.find((f) => f.id === formatId);
+
+    // Server-provided teams (Random Battle and friends): the original flow, no team upload.
+    if (!entry && formatId === RANDOM_BATTLE_ID) { client.searchBattles(formatId); return; }
+    if (!entry) { showToast('Formats are still loading — try again in a moment.'); return; }
+
+    const validation = await loadValidation().catch(() => undefined);
+    const support = formatSupport(entry, validation?.getFormatRules(entry.id));
+    if (support.level === 'unsupported') { showToast(support.reason); return; }
+    if (!entry.searchShow) { showToast(`${entry.name} can't be searched on the ladder.`); return; }
+    if (entry.isRandomFormat) { client.searchBattles(formatId); return; }
+
+    const team = pickTeam(useTeamStore.getState(), entry.teamFormat);
+    if (!team) { showToast(`Build or import a team for ${entry.name} first.`); navigate('teams'); return; }
+    const check = validation?.validateTeam(entry.id, team.sets);
+    if (check?.status === 'illegal') {
+      showToast(`${team.name} isn't legal in ${entry.name}: ${check.problems[0] ?? 'see Team Builder'}`);
+      return;
+    }
+    client.searchBattles(formatId, team.sets);
   };
 
   const roomsNav = (
@@ -92,7 +115,7 @@ export default function App() {
     content = (
       <AppShell active={view.screen} onNavigate={navigate} profile={profile}
         onLogout={loggedIn ? logout : undefined} rooms={roomsNav} topbarExtra={conn}>
-        <PlaceholderScreen id={view.screen} onBack={() => navigate('play')} />
+        {view.screen === 'teams' ? <TeamsScreen /> : <PlaceholderScreen id={view.screen} onBack={() => navigate('play')} />}
       </AppShell>
     );
   }

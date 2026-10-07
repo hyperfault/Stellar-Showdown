@@ -1,22 +1,24 @@
 import type { PSClient } from '@stellar/core';
-import type { FormatOption, PlayerProfile, StellarService } from './types';
+import type { FormatOption, PlayerProfile, StellarService, Team } from './types';
+import { useTeamStore, type StoredTeam } from '../teams/store';
+import { spriteIdOf } from '../data/dex';
 
-/** The one format that is fully playable end-to-end right now. */
+/** The format that is selected before the player chooses another one. */
 export const RANDOM_BATTLE_ID = 'gen9randombattle';
 
-/**
- * Preset format list. Only Random Battle is playable; the rest are deliberate
- * "coming soon" entries so the picker looks intentional rather than empty.
- * Labels prefer the live server format names when they have arrived.
- */
+/** Stored team -> the UI's Team shape. */
+export function toUiTeam(team: StoredTeam): Team {
+  return {
+    id: team.id,
+    name: team.name,
+    formatId: team.format,
+    members: team.sets.filter((s) => s.species).map((s) => ({ species: s.species, spriteId: spriteIdOf(s.species) })),
+  };
+}
+
+/** Live format list from the server (empty until the connection delivers it). */
 function formatOptions(client: PSClient): FormatOption[] {
-  const live = (id: string, fallback: string) => client.formats.find((f) => f.id === id)?.name ?? fallback;
-  return [
-    { id: RANDOM_BATTLE_ID, label: live(RANDOM_BATTLE_ID, '[Gen 9] Random Battle'), playable: true },
-    { id: 'gen9ou', label: live('gen9ou', '[Gen 9] OU'), playable: false },
-    { id: 'gen9doublesou', label: live('gen9doublesou', '[Gen 9] Doubles OU'), playable: false },
-    { id: 'gen9vgc2026', label: live('gen9vgc2026', '[Gen 9] VGC 2026'), playable: false },
-  ];
+  return client.formats.map((f) => ({ id: f.id, label: f.name, playable: f.searchShow }));
 }
 
 /** Map the logged-in PS user to the UI profile shape. */
@@ -33,14 +35,13 @@ export function toPlayerProfile(user: PSClient['user']): PlayerProfile | undefin
 
 /**
  * Adapter: implements the homepage's StellarService contract on top of the
- * existing PSClient. No new networking — the client stays the source of truth.
- * Teams / recent battles / replays return empty until their milestones land;
- * the panels render polished empty states for those.
+ * existing PSClient and the local team library. No new networking — the client
+ * stays the source of truth for everything that comes from the server.
  */
 export function createShowdownService(client: PSClient): StellarService {
   return {
     getPlayerProfile: async () => toPlayerProfile(client.user),
-    getTeams: async () => [],
+    getTeams: async () => useTeamStore.getState().teams.map(toUiTeam),
     getSelectedTeam: async () => null,
     selectTeam: async () => {},
     getFormats: async () => formatOptions(client),

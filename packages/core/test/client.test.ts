@@ -42,7 +42,7 @@ describe('PSClient global + room routing', () => {
     expect(client.user?.userid).toBe('stellartester');
     expect(client.user?.named).toBe(true);
 
-    api.receive('|formats|[Gen 9] Random Battle,f;[Gen 9] OU,e;,S/V Singles');
+    api.receive('|formats|,LL|,1|S/V Singles|[Gen 9] Random Battle,f|[Gen 9] OU,e');
     expect(client.formats.map((f) => f.name)).toEqual(['[Gen 9] Random Battle', '[Gen 9] OU']);
     expect(client.formats[0]!.isRandomFormat).toBe(true);
     expect(client.formats[1]!.isRandomFormat).toBe(false);
@@ -96,5 +96,42 @@ describe('PSClient global + room routing', () => {
 
     client.sendChat('lobby', 'hi everyone');
     expect(api.sent).toContain('lobby|hi everyone');
+  });
+});
+
+describe('matchmaking with a team and the live format list', () => {
+  const FORMATS = '|formats|,LL|,1|S/V Singles|[Gen 9] Random Battle,f|[Gen 9] OU,e|[Gen 9] Anything Goes,c|,2|S/V Doubles|[Gen 9] Doubles OU,e';
+
+  it('keeps the Random Battle flow: no team upload, just null + search', () => {
+    const { factory, api } = fakeTransport();
+    const client = new PSClient({ transport: factory });
+    client.connect();
+    api.receive(FORMATS);
+    const rb = client.formats.find((f) => f.id === 'gen9randombattle')!;
+    expect(rb.isRandomFormat).toBe(true);
+    client.searchBattles(rb.id);
+    expect(api.sent).toContain('|/utm null');
+    expect(api.sent).toContain('|/search gen9randombattle');
+  });
+
+  it('uploads the packed team before searching a bring-your-own-team format', async () => {
+    const { Sets } = await import('@pkmn/sets');
+    const { importTeamPaste, packTeam } = await import('../src/teams');
+    const { gen } = await import('../src/dex');
+    const { factory, api } = fakeTransport();
+    const client = new PSClient({ transport: factory });
+    client.connect();
+    api.receive(FORMATS);
+    const ou = client.formats.find((f) => f.id === 'gen9ou')!;
+    expect(ou).toMatchObject({ needsTeam: true, searchShow: true, teamFormat: 'gen9ou' });
+    expect(client.formats.find((f) => f.id === 'gen9anythinggoes')!.searchShow).toBe(false);
+
+    const sets = importTeamPaste('Garchomp @ Rocky Helmet\nAbility: Rough Skin\nEVs: 252 HP / 252 Def / 4 SpD\nImpish Nature\n- Earthquake\n- Stealth Rock\n', gen)!.team;
+    client.searchBattles(ou.id, sets);
+    const utm = api.sent.find((s) => s.startsWith('|/utm '))!;
+    expect(utm).not.toBe('|/utm null');
+    expect(Sets.unpack(utm.slice('|/utm '.length).split(']')[0]!, gen.dex as never)).toMatchObject({ species: 'Garchomp', item: 'Rocky Helmet', ability: 'Rough Skin', nature: 'Impish' });
+    expect(api.sent.indexOf(utm)).toBeLessThan(api.sent.indexOf('|/search gen9ou'));
+    expect(utm).toBe(`|/utm ${packTeam(sets)}`);
   });
 });
